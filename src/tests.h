@@ -30,10 +30,9 @@ typedef struct {
 } test_case_t;
 
 enum {
-	TEST_CASE_OPEN_OBJ,
-	TEST_CASE_CLOSE_OBJ,
-	TEST_CASE_OPEN_ARRAY,
-	TEST_CASE_CLOSE_ARRAY
+	TEST_CASE_CLOSE_OBJ = SON_TOTAL,
+	TEST_CASE_CLOSE_ARRAY,
+	TEST_CASE_TOTAL
 };
 
 #if defined __cplusplus
@@ -41,8 +40,10 @@ extern "C" {
 #endif
 
 
-test_case_t * test_case_get(int i);
-int test_case_count();
+void test_init(int max_depth, int seed);
+test_case_t * test_get_case(u8 test);
+int test_get_count();
+void test_show_case(const test_case_t * test);
 
 
 #if defined __cplusplus
