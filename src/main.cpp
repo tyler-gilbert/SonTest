@@ -8,69 +8,70 @@
 
 #define DATA_TEST_SIZE 64
 #define CREATE_TEST_FILE "/home/create_test.son"
-
+#define MAX_DEPTH 16
 
 static int create_primary_values(const char * file_name);
 static int edit_primary_values(const char * file_name);
 static int verify_primary_values(const char * file_name);
 static int verify_secondary_values(const char * file_name);
 
-static int write_test_value(Son<8> & son, test_case_t * test_case, const test_value_t & value);
-static int edit_test_value(Son<8> & son, test_case_t * test_case, test_value_t & value);
-static int verify_test_value(Son<8> & son, test_case_t * test_case, test_value_t & value);
+static int write_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, const test_value_t & value);
+static int edit_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, test_value_t & value);
+static int verify_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, test_value_t & value);
 
 int main(int argc, char * argv[]){
 	printf("Starting SON Test\n");
-	test_init(6, Timer::get_clock_usec());
 
 	int i;
 	int tab_counter;
 	int tab_count = 0;
 	test_case_t * test_case;
-	printf("{\n");
-	tab_count++;
-	for(i=0; i < test_get_count(); i++){
-		test_case = test_get_case(i);
+	while(1){
+		printf("{\n");
+		tab_count=1;
+		test_init(4, Timer::get_clock_usec());
 
-		for(tab_counter = 0; tab_counter < tab_count; tab_counter++){
-			printf("\t");
+		for(i=0; i < test_get_count(); i++){
+			test_case = test_get_case(i);
+
+			for(tab_counter = 0; tab_counter < tab_count; tab_counter++){
+				printf("\t");
+			}
+			if( test_case->type == SON_OBJ ){
+				tab_count++;
+			} else if( test_case->type == TEST_CASE_CLOSE_OBJ ){
+				tab_count--;
+			} else if( test_case->type == SON_ARRAY ){
+				tab_count++;
+			} else if( test_case->type == TEST_CASE_CLOSE_ARRAY ){
+				tab_count--;
+			}
+			test_show_case(test_case);
+			printf("\n");
 		}
-		if( test_case->type == SON_OBJ ){
-			tab_count++;
-		} else if( test_case->type == TEST_CASE_CLOSE_OBJ ){
-			tab_count--;
-		} else if( test_case->type == SON_ARRAY ){
-			tab_count++;
-		} else if( test_case->type == TEST_CASE_CLOSE_ARRAY ){
-			tab_count--;
+		printf("}\n");
+
+		unlink("/home/test.son");
+
+		if( create_primary_values("/home/test.son") < 0 ){
+			printf("create primary value file failed\n");
+			exit(1);
 		}
-		test_show_case(test_case);
-		printf("\n");
-	}
-	printf("}\n");
 
-	//exit(1);
+		if( verify_primary_values("/home/test.son") < 0 ){
+			printf("Failed to verify primary test values\n");
+			exit(1);
+		}
 
-	unlink("/home/test.son");
+		if( edit_primary_values("/home/test.son") < 0 ){
+			printf("Failed to edit primary test values\n");
+			exit(1);
+		}
 
-	if( create_primary_values("/home/test.son") < 0 ){
-		printf("create primary value file failed\n");
-		exit(1);
-	}
-
-	if( verify_primary_values("/home/test.son") < 0 ){
-		printf("Failed to verify primary test values\n");
-		exit(1);
-	}
-
-	if( edit_primary_values("/home/test.son") < 0 ){
-		printf("Failed to edit primary test values\n");
-		exit(1);
-	}
-
-	if( verify_secondary_values("/home/test.son") < 0 ){
-		printf("Failed to verify secondary test values\n");
-		exit(1);
+		if( verify_secondary_values("/home/test.son") < 0 ){
+			printf("Failed to verify secondary test values\n");
+			exit(1);
+		}
 	}
 
 	printf("Test complete\n");
@@ -81,7 +82,7 @@ int main(int argc, char * argv[]){
 int create_primary_values(const char * file_name){
 	int i;
 	test_case_t * test_case;
-	Son<8> son;
+	Son<MAX_DEPTH> son;
 
 	if( son.create(file_name) < 0 ){
 		printf("Failed to open file %s (%d)\n", file_name, son.err());
@@ -118,7 +119,7 @@ int create_primary_values(const char * file_name){
 int edit_primary_values(const char * file_name){
 	int i;
 	test_case_t * test_case;
-	Son<8> son;
+	Son<MAX_DEPTH> son;
 
 	if( son.open_edit(file_name) < 0 ){
 		return -1;
@@ -146,7 +147,7 @@ int edit_primary_values(const char * file_name){
 }
 
 int verify_primary_values(const char * file_name){
-	Son<8> son;
+	Son<MAX_DEPTH> son;
 	test_case_t * test_case;
 	int i;
 
@@ -177,7 +178,7 @@ int verify_primary_values(const char * file_name){
 }
 
 int verify_secondary_values(const char * file_name){
-	Son<8> son;
+	Son<MAX_DEPTH> son;
 	test_case_t * test_case;
 	int i;
 
@@ -207,7 +208,7 @@ int verify_secondary_values(const char * file_name){
 	return 0;
 }
 
-int verify_test_value(Son<8> & son, test_case_t * test_case, test_value_t & value){
+int verify_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, test_value_t & value){
 	test_value_t verify_value;
 	memset(verify_value.str, 0, TEST_CASE_STR_SIZE);
 
@@ -273,7 +274,7 @@ int verify_test_value(Son<8> & son, test_case_t * test_case, test_value_t & valu
 	return -1;
 }
 
-int edit_test_value(Son<8> & son, test_case_t * test_case, test_value_t & value){
+int edit_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, test_value_t & value){
 
 	switch(test_case->type){
 	case SON_STRING: return son.edit(test_case->access, value.str);
@@ -294,7 +295,7 @@ int edit_test_value(Son<8> & son, test_case_t * test_case, test_value_t & value)
 	return -1;
 }
 
-int write_test_value(Son<8> & son, test_case_t * test_case, const test_value_t & value){
+int write_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, const test_value_t & value){
 
 	switch(test_case->type){
 	case SON_STRING: return son.write(test_case->key, value.str);

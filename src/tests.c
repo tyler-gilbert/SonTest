@@ -13,8 +13,8 @@
 
 
 typedef struct {
-	int array_counter;
 	int type;
+	int array_counter;
 	char access[SON_ACCESS_NAME_CAPACITY];
 } test_stack_t;
 
@@ -32,7 +32,7 @@ static const char * generate_random_string();
 static test_case_t * generate_test_case();
 static test_case_t * create_test_case();
 
-#define TEST_CASE_SIZE 40
+#define TEST_CASE_SIZE 50
 
 test_case_t test_cases[TEST_CASE_SIZE];
 
@@ -53,7 +53,6 @@ void test_init(int max_depth, int seed){
 		test_case = create_test_case();
 		memcpy(test_cases + i, test_case, sizeof(test_case_t));
 	}
-
 }
 
 test_case_t * test_get_case(u8 test){
@@ -84,9 +83,15 @@ test_case_t * generate_test_case(){
 		return 0;
 	}
 
+	if( (m_test_case.type == SON_ARRAY) || (m_test_case.type == SON_OBJ) ){
+		if( m_stack_loc >= m_max_depth-2 ){
+			return 0;
+		}
+	}
+
 	if( m_count - (m_counter+1) < m_stack_loc ){
 		m_test_case.type = TEST_CASE_CLOSE_OBJ;
-	} else {
+	} else if( (m_test_case.type != TEST_CASE_CLOSE_OBJ) && (m_test_case.type != TEST_CASE_CLOSE_ARRAY)){
 		sprintf(m_test_case.key, "k%d", m_counter);
 
 		if( m_stack[m_stack_loc].type == SON_OBJ ){
@@ -96,9 +101,6 @@ test_case_t * generate_test_case(){
 				snprintf(m_test_case.access, SON_ACCESS_NAME_SIZE, "%s.%s", m_stack[m_stack_loc].access, m_test_case.key);
 			}
 		} else if( m_stack[m_stack_loc].type == SON_ARRAY ){
-			if( m_test_case.type == SON_ARRAY ){
-				return 0;
-			}
 			snprintf(m_test_case.access, SON_ACCESS_NAME_SIZE, "%s[%d]", m_stack[m_stack_loc].access, m_stack[m_stack_loc].array_counter);
 			m_stack[m_stack_loc].array_counter++;
 		} else {
@@ -126,15 +128,21 @@ test_case_t * generate_test_case(){
 		m_test_case.secondary_value.num = rand() - INT_MAX/2;
 		break;
 	case SON_FALSE:
+		m_test_case.primary_value.unum = 0;
+		m_test_case.secondary_value.unum = 1;
+		break;
 	case SON_NULL:
+		m_test_case.primary_value.unum = 0;
+		m_test_case.secondary_value.unum = 0;
+		break;
 	case SON_TRUE:
-		m_test_case.primary_value.num = 0;
-		m_test_case.secondary_value.num = 0;
+		m_test_case.primary_value.unum = 1;
+		m_test_case.secondary_value.unum = 0;
 		break;
 
 	case SON_OBJ:
 	case SON_ARRAY:
-		if( m_stack_loc < TEST_STACK_SIZE-1 ){
+		if( m_stack_loc < m_max_depth-2 ){
 			m_stack_loc++;
 			m_stack[m_stack_loc].type = m_test_case.type;
 			m_stack[m_stack_loc].array_counter = 0;

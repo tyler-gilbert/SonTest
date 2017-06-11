@@ -5,14 +5,14 @@
     "LocalIsStartup": false,
     "LocalProjectId": "-KYj6kiEQ3U56dIozdqM",
     "buildprefix": "build_",
-    "description": "HelloWorld is a simple demo app that uses the standard output to print a simple message.",
-    "github": "https://github.com/StratifyLabs/HelloWorld",
+    "description": "SonTest is a utility for testing the Stratify Object Notation (SON) library.",
+    "github": "https://github.com/StratifyLabs/SonTest",
     "hardwareid": "",
     "name": "SonTest",
     "permissions": "public",
     "publisher": "Stratify Labs, Inc",
     "ram": 0,
-    "tags": "demo",
+    "tags": "utility",
     "type": "StratifyApp",
     "version": "0.2"
 }
