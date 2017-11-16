@@ -8,7 +8,7 @@
 #ifndef TESTS_H_
 #define TESTS_H_
 
-#include <stfy/son.h>
+#include <sapi/son.h>
 
 #define TEST_CASE_STR_SIZE 64
 #define TEST_CASE_DATA_SIZE 64

@@ -1,8 +1,8 @@
 #include <cstdio>
 #include <cstring>
-#include <stfy/sys.hpp>
-#include <stfy/fmt.hpp>
-#include <stfy/var.hpp>
+#include <sapi/sys.hpp>
+#include <sapi/fmt.hpp>
+#include <sapi/var.hpp>
 
 #include "tests.h"
 
@@ -10,68 +10,115 @@
 #define CREATE_TEST_FILE "/home/create_test.son"
 #define MAX_DEPTH 16
 
-static int create_primary_values(const char * file_name);
-static int edit_primary_values(const char * file_name);
-static int verify_primary_values(const char * file_name);
-static int verify_secondary_values(const char * file_name);
+static int create_primary_values(const char * file_name, void * image = 0, int image_size = 0);
+static int edit_primary_values(const char * file_name, void * image = 0, int image_size = 0);
+static int verify_primary_values(const char * file_name, void * image = 0, int image_size = 0);
+static int verify_secondary_values(const char * file_name, void * image = 0, int image_size = 0);
+
+static int append_primary_values(const char * file_name);
 
 static int write_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, const test_value_t & value);
 static int edit_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, test_value_t & value);
 static int verify_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, test_value_t & value);
 
 int main(int argc, char * argv[]){
+	Cli cli(argc, argv);
+	cli.set_publisher("Stratify Labs, Inc");
+	cli.handle_version();
+	Data image(4096);
+	image.clear();
+
 	printf("Starting SON Test\n");
 
 	int i;
 	int tab_counter;
 	int tab_count = 0;
 	test_case_t * test_case;
-	while(1){
-		printf("{\n");
-		tab_count=1;
-		test_init(4, Timer::get_clock_usec());
+	printf("{\n");
+	tab_count=1;
+	test_init(10, Timer::get_clock_usec());
 
-		for(i=0; i < test_get_count(); i++){
-			test_case = test_get_case(i);
+	for(i=0; i < test_get_count(); i++){
+		test_case = test_get_case(i);
 
-			for(tab_counter = 0; tab_counter < tab_count; tab_counter++){
-				printf("\t");
-			}
-			if( test_case->type == SON_OBJ ){
-				tab_count++;
-			} else if( test_case->type == TEST_CASE_CLOSE_OBJ ){
-				tab_count--;
-			} else if( test_case->type == SON_ARRAY ){
-				tab_count++;
-			} else if( test_case->type == TEST_CASE_CLOSE_ARRAY ){
-				tab_count--;
-			}
-			test_show_case(test_case);
-			printf("\n");
+		for(tab_counter = 0; tab_counter < tab_count; tab_counter++){
+			printf("\t");
 		}
-		printf("}\n");
+		if( test_case->type == SON_OBJ ){
+			tab_count++;
+		} else if( test_case->type == TEST_CASE_CLOSE_OBJ ){
+			tab_count--;
+		} else if( test_case->type == SON_ARRAY ){
+			tab_count++;
+		} else if( test_case->type == TEST_CASE_CLOSE_ARRAY ){
+			tab_count--;
+		}
+		test_show_case(test_case);
+		printf("\n");
+	}
+	printf("}\n");
 
-		unlink("/home/test.son");
+	unlink("/home/test.son");
 
-		if( create_primary_values("/home/test.son") < 0 ){
+	if( create_primary_values("/home/test.son") < 0 ){
+		printf("create primary value file failed\n");
+		exit(1);
+	}
+
+	if( verify_primary_values("/home/test.son") < 0 ){
+		printf("Failed to verify primary test values\n");
+		exit(1);
+	}
+
+	if( edit_primary_values("/home/test.son") < 0 ){
+		printf("Failed to edit primary test values\n");
+		exit(1);
+	}
+
+	if( verify_secondary_values("/home/test.son") < 0 ){
+		printf("Failed to verify secondary test values\n");
+		exit(1);
+	}
+
+	if( image.data() != 0 ){
+
+		printf("Start image test----------------%d\n\n", image.capacity());
+
+		if( create_primary_values(0, image.data(), image.capacity()) < 0 ){
 			printf("create primary value file failed\n");
 			exit(1);
 		}
 
-		if( verify_primary_values("/home/test.son") < 0 ){
+		if( verify_primary_values(0, image.data(), image.capacity()) < 0 ){
 			printf("Failed to verify primary test values\n");
 			exit(1);
 		}
 
-		if( edit_primary_values("/home/test.son") < 0 ){
+		if( edit_primary_values(0, image.data(), image.capacity()) < 0 ){
 			printf("Failed to edit primary test values\n");
 			exit(1);
 		}
 
-		if( verify_secondary_values("/home/test.son") < 0 ){
+		if( verify_secondary_values(0, image.data(), image.capacity()) < 0 ){
 			printf("Failed to verify secondary test values\n");
 			exit(1);
 		}
+
+	}
+
+
+
+
+	unlink("/home/test.son");
+
+	if( append_primary_values("/home/test.son") < 0 ){
+		printf("create primary value file failed\n");
+		exit(1);
+	}
+
+	if( verify_primary_values("/home/test.son") < 0 ){
+		printf("Failed to verify primary test values\n");
+		exit(1);
 	}
 
 	printf("Test complete\n");
@@ -79,15 +126,22 @@ int main(int argc, char * argv[]){
 	return 0;
 }
 
-int create_primary_values(const char * file_name){
+int create_primary_values(const char * file_name, void * image, int image_size){
 	int i;
 	test_case_t * test_case;
 	Son<MAX_DEPTH> son;
 
-	if( son.create(file_name) < 0 ){
-		printf("Failed to open file %s (%d)\n", file_name, son.err());
-		perror("Errno Message");
-		return -1;
+	if( file_name == 0 ){
+		if( son.create_image(image, image_size) < 0 ){
+			printf("Failed to open image (%d)\n", son.err());
+			return -1;
+		}
+	} else {
+		if( son.create(file_name) < 0 ){
+			printf("Failed to open file %s (%d)\n", file_name, son.err());
+			perror("Errno Message");
+			return -1;
+		}
 	}
 
 	if( son.open_obj("") < 0 ){
@@ -104,10 +158,9 @@ int create_primary_values(const char * file_name){
 			printf("Failed to write test value (%d)\n", son.err());
 			return -1;
 		}
-
 	}
 
-	if( son.close(true) < 0 ){
+	if( son.close() < 0 ){
 		printf("Failed to close file (%d-%d)\n", son.err(), son.fileno());
 		perror("Error message");
 		return -1;
@@ -116,13 +169,73 @@ int create_primary_values(const char * file_name){
 	return 0;
 }
 
-int edit_primary_values(const char * file_name){
+int append_primary_values(const char * file_name){
 	int i;
 	test_case_t * test_case;
 	Son<MAX_DEPTH> son;
 
-	if( son.open_edit(file_name) < 0 ){
+	//first create a file with no values
+	if( son.create(file_name) < 0 ){
+		printf("Failed to open file %s (%d)\n", file_name, son.err());
+		perror("Errno Message");
 		return -1;
+	}
+
+	if( son.open_obj("") < 0 ){
+		printf("Failed to create root object (%d)\n", son.err());
+		return -1;
+	}
+
+	if( son.close() < 0 ){
+		printf("Failed to close file (%d-%d)\n", son.err(), son.fileno());
+		perror("Error message");
+		return -1;
+	}
+
+
+	//now append all values to the file
+	if( son.open_append(file_name) < 0 ){
+		printf("Failed to open file %s for appending (%d)\n", file_name, son.err());
+		perror("Errno Message");
+		return -1;
+	}
+
+	for(i=0; i < test_get_count(); i++){
+		test_case = test_get_case(i);
+		printf("Write value:");
+		test_show_case(test_case);
+		printf("\n");
+		if( write_test_value(son, test_case, test_case->primary_value) < 0 ){
+			printf("Failed to write test value (%d)\n", son.err());
+			return -1;
+		}
+	}
+
+	if( son.close() < 0 ){
+		printf("Failed to close appended file (%d-%d)\n", son.err(), son.fileno());
+		perror("Error message");
+		return -1;
+	}
+
+	return 0;
+
+}
+
+int edit_primary_values(const char * file_name, void * image, int image_size){
+	int i;
+	test_case_t * test_case;
+	Son<MAX_DEPTH> son;
+
+	if( file_name == 0 ){
+		if( son.open_edit_image(image, image_size) < 0 ){
+			printf("Failed to open image (%d)\n", son.err());
+			return -1;
+		}
+	} else {
+		if( son.open_edit(file_name) < 0 ){
+			printf("Failed to open file %s (%d)\n", file_name, son.get_error());
+			return -1;
+		}
 	}
 
 	for(i=0; i < test_get_count(); i++){
@@ -137,7 +250,7 @@ int edit_primary_values(const char * file_name){
 
 	}
 
-	if( son.close(true) < 0 ){
+	if( son.close() < 0 ){
 		printf("Failed to close file (%d)\n", son.err());
 		perror("Error message");
 		return -1;
@@ -146,16 +259,23 @@ int edit_primary_values(const char * file_name){
 	return 0;
 }
 
-int verify_primary_values(const char * file_name){
+int verify_primary_values(const char * file_name, void * image, int image_size){
 	Son<MAX_DEPTH> son;
 	test_case_t * test_case;
 	int i;
 
 	errno = 0;
-	if( son.open_read(file_name) < 0 ){
-		printf("Failed to open file %s (%d)\n", file_name, son.err());
-		perror("Errno Message");
-		return -1;
+	if( file_name == 0 ){
+		if( son.open_read_image(image, image_size) < 0 ){
+			printf("Failed to open image (%d)\n", son.err());
+			return -1;
+		}
+	} else {
+		if( son.open_read(file_name) < 0 ){
+			printf("Failed to open file %s (%d)\n", file_name, son.err());
+			perror("Errno Message");
+			return -1;
+		}
 	}
 
 	for(i=0; i < test_get_count(); i++){
@@ -177,15 +297,22 @@ int verify_primary_values(const char * file_name){
 	return 0;
 }
 
-int verify_secondary_values(const char * file_name){
+int verify_secondary_values(const char * file_name, void * image, int image_size){
 	Son<MAX_DEPTH> son;
 	test_case_t * test_case;
 	int i;
 
-	if( son.open_read(file_name) < 0 ){
-		printf("Failed to open file %s (%d)\n", file_name, son.err());
-		perror("Errno Message");
-		return -1;
+	if( file_name == 0 ){
+		if( son.open_read_image(image, image_size) < 0 ){
+			printf("Failed to open image for reading\n");
+			return -1;
+		}
+	} else {
+		if( son.open_read(file_name) < 0 ){
+			printf("Failed to open file %s (%d)\n", file_name, son.err());
+			perror("Errno Message");
+			return -1;
+		}
 	}
 
 	for(i=0; i < test_get_count(); i++){
@@ -199,7 +326,7 @@ int verify_secondary_values(const char * file_name){
 		}
 	}
 
-	if( son.close(true) < 0 ){
+	if( son.close() < 0 ){
 		printf("Failed to close file (%d)\n", son.err());
 		perror("Error message");
 		return -1;

@@ -32,7 +32,7 @@ static const char * generate_random_string();
 static test_case_t * generate_test_case();
 static test_case_t * create_test_case();
 
-#define TEST_CASE_SIZE 50
+#define TEST_CASE_SIZE 80
 
 test_case_t test_cases[TEST_CASE_SIZE];
 
