@@ -17,6 +17,7 @@ static int verify_primary_values(const char * file_name, void * message = 0, int
 static int verify_secondary_values(const char * file_name, void * message = 0, int message_size = 0);
 static int send_primary_values(const char * file_name, void * message, int message_size);
 static int show_keys(const char * file_name);
+static int to_json_callback(void * context, const char * entry);
 
 void * receive_primary_values(void * args);
 
@@ -458,6 +459,12 @@ int verify_primary_values(const char * file_name, void * message, int message_si
 			perror("Errno Message");
 			return -1;
 		}
+
+		son.to_json(to_json_callback);
+		son.close();
+
+		son.open_read(file_name);
+
 	}
 
 	for(i=0; i < test_get_count(); i++){
@@ -626,5 +633,10 @@ int write_test_value(Son<MAX_DEPTH> & son, test_case_t * test_case, const test_v
 
 	printf("Bad test case type %d\n", test_case->type);
 	return -1;
+}
+
+int to_json_callback(void * context, const char * entry){
+	printf("%s", entry);
+	return 0;
 }
 
