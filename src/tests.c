@@ -32,7 +32,7 @@ static const char * generate_random_string();
 static test_case_t * generate_test_case();
 static test_case_t * create_test_case();
 
-#define TEST_CASE_SIZE 80
+#define TEST_CASE_SIZE 32
 
 test_case_t test_cases[TEST_CASE_SIZE];
 
@@ -204,7 +204,7 @@ void test_show_case(const test_case_t * test){
 	case SON_TRUE:
 		printf("->bool p:true s:true");
 		break;
-	case SON_OBJ:
+	case SON_OBJECT:
 		printf(" {");
 		break;
 	case SON_ARRAY:
